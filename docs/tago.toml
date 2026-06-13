@@ -1,0 +1,10 @@
+title       = "doaj"
+baseURL     = "https://doaj-cli.tamnd.com/"
+description = "Search DOAJ open access journals and articles"
+contentDir  = "content"
+outputDir   = "public"
+theme       = "tago-doks"
+syntaxHighlight = "true"
+
+[params]
+github = "https://github.com/tamnd/doaj-cli"
