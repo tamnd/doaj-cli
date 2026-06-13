@@ -191,10 +191,9 @@ func (c *Client) SearchArticles(ctx context.Context, query string, limit int) ([
 	page := 1
 	for {
 		params := url.Values{}
-		params.Set("q", query)
 		params.Set("pageSize", strconv.Itoa(pageSize))
 		params.Set("page", strconv.Itoa(page))
-		rawURL := c.baseURL + "/search/articles?" + params.Encode()
+		rawURL := c.baseURL + "/search/articles/" + url.PathEscape(query) + "?" + params.Encode()
 
 		var resp articleSearchResp
 		if err := c.getJSON(ctx, rawURL, &resp); err != nil {
@@ -229,10 +228,9 @@ func (c *Client) SearchJournals(ctx context.Context, query string, limit int) ([
 	page := 1
 	for {
 		params := url.Values{}
-		params.Set("q", query)
 		params.Set("pageSize", strconv.Itoa(pageSize))
 		params.Set("page", strconv.Itoa(page))
-		rawURL := c.baseURL + "/search/journals?" + params.Encode()
+		rawURL := c.baseURL + "/search/journals/" + url.PathEscape(query) + "?" + params.Encode()
 
 		var resp journalSearchResp
 		if err := c.getJSON(ctx, rawURL, &resp); err != nil {
@@ -253,15 +251,24 @@ func (c *Client) SearchJournals(ctx context.Context, query string, limit int) ([
 }
 
 // GetJournal fetches a single journal by ISSN.
+// The DOAJ /journals/{id} endpoint requires the internal ID, not an ISSN.
+// We use the search endpoint with an ISSN query and return the first match.
 func (c *Client) GetJournal(ctx context.Context, issn string) (Journal, error) {
 	issn = normaliseISSN(issn)
-	rawURL := c.baseURL + "/journals/" + url.PathEscape(issn)
+	params := url.Values{}
+	params.Set("pageSize", "1")
+	params.Set("page", "1")
+	// Search for the ISSN directly; DOAJ indexes eissn and pissn fields.
+	rawURL := c.baseURL + "/search/journals/" + url.PathEscape(issn) + "?" + params.Encode()
 
-	var result wireJournalResult
-	if err := c.getJSON(ctx, rawURL, &result); err != nil {
+	var resp journalSearchResp
+	if err := c.getJSON(ctx, rawURL, &resp); err != nil {
 		return Journal{}, err
 	}
-	return wireJournalToJournal(result, 0), nil
+	if len(resp.Results) == 0 {
+		return Journal{}, ErrNotFound
+	}
+	return wireJournalToJournal(resp.Results[0], 0), nil
 }
 
 // GetArticle fetches a single article by its DOAJ internal id.

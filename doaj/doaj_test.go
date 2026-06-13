@@ -212,10 +212,12 @@ func TestSearchJournalsParsesResults(t *testing.T) {
 
 func TestGetJournalByISSN(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/journals/1932-6203" {
+		if r.URL.Path != "/search/journals/1932-6203" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
-		_, _ = w.Write([]byte(singleJournalPayload))
+		// Return a search response wrapping the single journal.
+		payload := `{"total":1,"pageSize":1,"page":1,"results":[` + singleJournalPayload + `]}`
+		_, _ = w.Write([]byte(payload))
 	}))
 	defer srv.Close()
 
@@ -262,7 +264,7 @@ func TestGetArticleByID(t *testing.T) {
 
 func TestGetJournalNotFound(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"total":0,"pageSize":1,"page":1,"results":[]}`))
 	}))
 	defer srv.Close()
 
